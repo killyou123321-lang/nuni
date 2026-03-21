@@ -75,6 +75,12 @@ export default function AddEditRecipe() {
   async function handleSave() {
     if (!title.trim()) return alert('הכניסי שם למתכון');
     setSaving(true);
+
+    const timeoutId = setTimeout(() => {
+      setSaving(false);
+      alert('השמירה לקחת יותר מדי זמן - בדקי את החיבור לאינטרנט ונסי שוב');
+    }, 15000);
+
     try {
       const finalCategory = newCategory.trim() || category;
       let imageURL = existingImageURL;
@@ -108,8 +114,10 @@ export default function AddEditRecipe() {
         await addDoc(collection(db, 'recipes'), data);
       }
 
+      clearTimeout(timeoutId);
       navigate('/my-book');
     } catch (err) {
+      clearTimeout(timeoutId);
       console.error(err);
       alert('שגיאה בשמירת המתכון');
     } finally {
