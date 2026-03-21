@@ -8,6 +8,23 @@ import { db, storage } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { colors } from '../colors';
 
+async function compressImage(file, maxWidth = 1200, quality = 0.75) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const scale = Math.min(1, maxWidth / img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      canvas.toBlob((blob) => resolve(blob), 'image/jpeg', quality);
+    };
+    img.src = url;
+  });
+}
+
 export default function AddEditRecipe() {
   const { id } = useParams();
   const isEdit = Boolean(id);
@@ -86,8 +103,9 @@ export default function AddEditRecipe() {
       let imageURL = existingImageURL;
 
       if (imageFile) {
+        const compressed = await compressImage(imageFile);
         const storageRef = ref(storage, `recipes/${isEdit ? id : Date.now()}/image`);
-        await uploadBytes(storageRef, imageFile);
+        await uploadBytes(storageRef, compressed);
         imageURL = await getDownloadURL(storageRef);
       }
 
