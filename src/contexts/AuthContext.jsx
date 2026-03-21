@@ -92,9 +92,26 @@ export function AuthProvider({ children }) {
     refreshUserProfile,
   };
 
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: '#FFF4EF',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '16px',
+        color: '#A08070',
+        fontFamily: 'inherit',
+      }}>
+        טוענת...
+      </div>
+    );
+  }
+
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 }
