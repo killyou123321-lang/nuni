@@ -72,12 +72,12 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
+      setLoading(false);
       if (user) {
-        await refreshUserProfile(user.uid);
+        refreshUserProfile(user.uid);
       } else {
         setUserProfile(null);
       }
-      setLoading(false);
     });
     return unsub;
   }, []);
