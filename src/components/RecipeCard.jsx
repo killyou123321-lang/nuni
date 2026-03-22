@@ -4,11 +4,13 @@ import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { colors } from '../colors';
+import ShareToChatModal from './ShareToChatModal';
 
 export default function RecipeCard({ recipe, onSaveToBook }) {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const isLiked = recipe.likes?.includes(currentUser?.uid);
   const isFavorited = recipe.favoritedBy?.includes(currentUser?.uid);
@@ -127,8 +129,16 @@ export default function RecipeCard({ recipe, onSaveToBook }) {
             active={isSaved}
             title="שמרי לספר שלי"
           />
+          <ActionBtn
+            icon="📤"
+            count={null}
+            onClick={e => { e.stopPropagation(); setShareOpen(true); }}
+            active={false}
+            title="שלחי לצ׳אט"
+          />
         </div>
       </div>
+      {shareOpen && <ShareToChatModal recipe={recipe} onClose={() => setShareOpen(false)} />}
     </div>
   );
 }

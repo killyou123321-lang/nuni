@@ -1,5 +1,10 @@
 import { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, doc, deleteDoc, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
+
+const PRESET_CATEGORIES = [
+  'ארוחת בוקר', 'מרקים', 'סלטים', 'מנות עיקריות', 'קינוחים',
+  'אפייה', 'שתייה', 'חטיפים', 'לחמים', 'פסטות', 'בשר', 'דגים',
+];
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -162,28 +167,65 @@ export default function MyBook() {
             borderRadius: '16px',
             padding: '16px',
             marginBottom: '16px',
-            display: 'flex',
-            gap: '10px',
           }}>
-            <input
-              autoFocus
-              value={newCategoryName}
-              onChange={e => setNewCategoryName(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && addCategory()}
-              placeholder="שם הקטגוריה..."
-              style={{
-                flex: 1,
-                border: `1.5px solid ${colors.border}`,
-                borderRadius: '10px',
-                padding: '10px 14px',
-                fontSize: '14px',
-                outline: 'none',
-                direction: 'rtl',
-                color: colors.text,
-              }}
-            />
-            <button onClick={addCategory} style={btnGreen}>הוסיפי</button>
-            <button onClick={() => setShowAddCategory(false)} style={btnGray}>ביטול</button>
+            <div style={{ position: 'relative', marginBottom: '10px' }}>
+              <input
+                autoFocus
+                value={newCategoryName}
+                onChange={e => setNewCategoryName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && addCategory()}
+                placeholder="שם הקטגוריה..."
+                style={{
+                  width: '100%',
+                  border: `1.5px solid ${colors.border}`,
+                  borderRadius: '10px',
+                  padding: '10px 14px',
+                  fontSize: '14px',
+                  outline: 'none',
+                  direction: 'rtl',
+                  color: colors.text,
+                  boxSizing: 'border-box',
+                  fontFamily: 'inherit',
+                }}
+              />
+              {newCategoryName.trim() && (() => {
+                const lower = newCategoryName.toLowerCase();
+                const suggestions = PRESET_CATEGORIES.filter(
+                  s => s.toLowerCase().includes(lower) && !categories.find(c => c.name === s)
+                );
+                if (!suggestions.length) return null;
+                return (
+                  <div style={{
+                    position: 'absolute', top: '100%', right: 0, left: 0,
+                    background: colors.white,
+                    border: `1.5px solid ${colors.border}`,
+                    borderRadius: '10px',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
+                    zIndex: 100, overflow: 'hidden', marginTop: '4px',
+                  }}>
+                    {suggestions.map((s, i) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onMouseDown={() => setNewCategoryName(s)}
+                        style={{
+                          display: 'block', width: '100%', textAlign: 'right',
+                          padding: '10px 14px', background: 'transparent', border: 'none',
+                          borderTop: i > 0 ? `1px solid ${colors.border}` : 'none',
+                          fontSize: '14px', color: colors.text, cursor: 'pointer', fontFamily: 'inherit',
+                        }}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={addCategory} style={btnGreen}>הוסיפי</button>
+              <button onClick={() => { setShowAddCategory(false); setNewCategoryName(''); }} style={btnGray}>ביטול</button>
+            </div>
           </div>
         )}
 

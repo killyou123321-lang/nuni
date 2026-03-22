@@ -5,6 +5,7 @@ const tabs = [
   { icon: '❤️', label: 'מועדפים', path: '/favorites' },
   { icon: '🍽️', label: 'מתכונים', path: '/feed' },
   { icon: '📚', label: 'הספר שלי', path: '/my-book' },
+  { icon: '💬', label: 'צ׳אט', path: '/chat' },
 ];
 
 export default function BottomNav() {

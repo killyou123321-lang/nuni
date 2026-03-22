@@ -4,6 +4,7 @@ import { doc, getDoc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from 'fire
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import SaveToBookModal from '../components/SaveToBookModal';
+import ShareToChatModal from '../components/ShareToChatModal';
 import { colors } from '../colors';
 
 export default function RecipeDetail() {
@@ -13,6 +14,7 @@ export default function RecipeDetail() {
   const [recipe, setRecipe] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saveOpen, setSaveOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   useEffect(() => {
     getDoc(doc(db, 'recipes', id)).then(snap => {
@@ -132,6 +134,7 @@ export default function RecipeDetail() {
           {!isOwn && (
             <ActionButton icon="📌" label="שמרי לספר" onClick={() => setSaveOpen(true)} />
           )}
+          <ActionButton icon="📤" label="שלחי" onClick={() => setShareOpen(true)} />
         </div>
 
         {/* Ingredients */}
@@ -187,6 +190,7 @@ export default function RecipeDetail() {
       </div>
 
       {saveOpen && <SaveToBookModal recipe={recipe} onClose={() => setSaveOpen(false)} />}
+      {shareOpen && <ShareToChatModal recipe={recipe} onClose={() => setShareOpen(false)} />}
     </div>
   );
 }

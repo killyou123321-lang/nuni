@@ -8,6 +8,8 @@ import AddEditRecipe from './pages/AddEditRecipe';
 import RecipeDetail from './pages/RecipeDetail';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
+import Chat from './pages/Chat';
+import ChatRoom from './pages/ChatRoom';
 
 function RequireAuth({ children }) {
   const { currentUser } = useAuth();
@@ -29,6 +31,8 @@ function AppRoutes() {
       <Route path="/recipe/:id" element={<RequireAuth><RecipeDetail /></RequireAuth>} />
       <Route path="/profile/:userId" element={<RequireAuth><Profile /></RequireAuth>} />
       <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
+      <Route path="/chat" element={<RequireAuth><Chat /></RequireAuth>} />
+      <Route path="/chat/:chatId" element={<RequireAuth><ChatRoom /></RequireAuth>} />
       <Route path="*" element={<Navigate to="/my-book" replace />} />
     </Routes>
   );
