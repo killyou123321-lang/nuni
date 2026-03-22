@@ -66,6 +66,7 @@ export default function AddEditRecipe() {
         const data = snap.data();
         setTitle(data.title || '');
         setCategory(data.category || '');
+        setNewCategory(data.category || '');
         setIngredients(data.ingredients?.length ? data.ingredients : ['']);
         setSteps(data.steps?.length ? data.steps : ['']);
         setVisibility(data.visibility || 'public');
@@ -105,12 +106,12 @@ export default function AddEditRecipe() {
     }, 15000);
 
     try {
-      const finalCategory = newCategory.trim() || category;
+      const finalCategory = newCategory.trim();
 
-      // שמירת קטגוריה חדשה לרשימת הקטגוריות של המשתמש
-      if (newCategory.trim() && currentUser) {
+      // שמירת קטגוריה לרשימת הקטגוריות של המשתמש אם היא לא קיימת
+      if (finalCategory && currentUser && !categories.some(c => c.name === finalCategory)) {
         const catRef = doc(collection(db, 'userCategories', currentUser.uid, 'categories'));
-        await setDoc(catRef, { name: newCategory.trim() }).catch(() => {});
+        await setDoc(catRef, { name: finalCategory }).catch(() => {});
       }
 
       let imageURL = existingImageURL;
@@ -211,73 +212,64 @@ export default function AddEditRecipe() {
         </div>
 
         {/* Category */}
-        <div>
+        <div style={{ position: 'relative' }}>
           <label style={labelStyle}>קטגוריה</label>
-
-          {/* Preset category chips */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
-            {PRESET_CATEGORIES.map(cat => {
-              const isSelected = category === cat && !newCategory.trim();
-              return (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => { setCategory(cat); setNewCategory(''); }}
-                  style={{
-                    padding: '6px 14px',
-                    borderRadius: '20px',
-                    border: `1.5px solid ${isSelected ? colors.peachDeep : colors.border}`,
-                    background: isSelected ? colors.peachDeep : colors.white,
-                    color: isSelected ? colors.white : colors.text,
-                    fontSize: '13px',
-                    fontWeight: isSelected ? '700' : '400',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  {cat}
-                </button>
-              );
-            })}
-            {/* User's custom categories not in presets */}
-            {categories
-              .filter(c => !PRESET_CATEGORIES.includes(c.name))
-              .map(c => {
-                const isSelected = category === c.name && !newCategory.trim();
-                return (
+          <input
+            value={newCategory}
+            onChange={e => setNewCategory(e.target.value)}
+            onBlur={() => setTimeout(() => setNewCategory(prev => prev), 150)}
+            placeholder="הכניסי קטגוריה..."
+            style={{ ...inputStyle, fontSize: '14px' }}
+          />
+          {/* Autocomplete suggestions */}
+          {newCategory.trim() && (() => {
+            const lower = newCategory.trim().toLowerCase();
+            const allOptions = [
+              ...PRESET_CATEGORIES,
+              ...categories.map(c => c.name).filter(n => !PRESET_CATEGORIES.includes(n)),
+            ];
+            const suggestions = allOptions.filter(
+              c => c.toLowerCase().includes(lower) && c !== newCategory.trim()
+            );
+            if (!suggestions.length) return null;
+            return (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                right: 0,
+                left: 0,
+                background: colors.white,
+                border: `1.5px solid ${colors.border}`,
+                borderRadius: '12px',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
+                zIndex: 100,
+                overflow: 'hidden',
+                marginTop: '4px',
+              }}>
+                {suggestions.map((s, i) => (
                   <button
-                    key={c.id}
+                    key={s}
                     type="button"
-                    onClick={() => { setCategory(c.name); setNewCategory(''); }}
+                    onMouseDown={() => setNewCategory(s)}
                     style={{
-                      padding: '6px 14px',
-                      borderRadius: '20px',
-                      border: `1.5px solid ${isSelected ? colors.peachDeep : colors.border}`,
-                      background: isSelected ? colors.peachDeep : colors.peachLight,
-                      color: isSelected ? colors.white : colors.text,
-                      fontSize: '13px',
-                      fontWeight: isSelected ? '700' : '400',
+                      display: 'block',
+                      width: '100%',
+                      textAlign: 'right',
+                      padding: '10px 16px',
+                      background: 'transparent',
+                      border: 'none',
+                      borderTop: i > 0 ? `1px solid ${colors.border}` : 'none',
+                      fontSize: '14px',
+                      color: colors.text,
                       cursor: 'pointer',
                     }}
                   >
-                    {c.name}
+                    {s}
                   </button>
-                );
-              })}
-          </div>
-
-          {/* New custom category input */}
-          <input
-            value={newCategory}
-            onChange={e => { setNewCategory(e.target.value); if (e.target.value.trim()) setCategory(''); }}
-            placeholder="או הכניסי קטגוריה חדשה..."
-            style={{ ...inputStyle, fontSize: '13px' }}
-          />
-          {newCategory.trim() && (
-            <div style={{ fontSize: '12px', color: colors.textLight, marginTop: '4px', paddingRight: '4px' }}>
-              קטגוריה חדשה: <strong>{newCategory.trim()}</strong> תישמר אוטומטית
-            </div>
-          )}
+                ))}
+              </div>
+            );
+          })()}
         </div>
 
         {/* Visibility */}
