@@ -100,6 +100,11 @@ export default function AddEditRecipe() {
     if (!title.trim()) return alert('הכניסי שם למתכון');
     setSaving(true);
 
+    const withTimeout = (promise, ms) => Promise.race([
+      promise,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), ms))
+    ]);
+
     try {
       const finalCategory = newCategory.trim();
 
@@ -108,8 +113,8 @@ export default function AddEditRecipe() {
       if (imageFile) {
         const compressed = await compressImage(imageFile);
         const storageRef = ref(storage, `recipes/${isEdit ? id : Date.now()}/image`);
-        await uploadBytes(storageRef, compressed);
-        imageURL = await getDownloadURL(storageRef);
+        await withTimeout(uploadBytes(storageRef, compressed), 20000);
+        imageURL = await withTimeout(getDownloadURL(storageRef), 10000);
       }
 
       const data = {
@@ -126,13 +131,13 @@ export default function AddEditRecipe() {
       };
 
       if (isEdit) {
-        await updateDoc(doc(db, 'recipes', id), data);
+        await withTimeout(updateDoc(doc(db, 'recipes', id), data), 10000);
       } else {
         data.createdAt = serverTimestamp();
         data.likes = [];
         data.savedBy = [];
         data.favoritedBy = [];
-        await addDoc(collection(db, 'recipes'), data);
+        await withTimeout(addDoc(collection(db, 'recipes'), data), 10000);
       }
 
       // שמירת קטגוריה חדשה ברקע - לא חוסמת את הניווט
@@ -143,9 +148,15 @@ export default function AddEditRecipe() {
 
       navigate('/my-book');
     } catch (err) {
-      console.error(err);
+      console.error('Save error:', err.code, err.message);
       setSaving(false);
-      alert('שגיאה בשמירת המתכון - בדקי חיבור לאינטרנט ונסי שוב');
+      if (err.message === 'TIMEOUT') {
+        alert('השמירה נכשלה - ייתכן שחוקי ה-Firebase לא מעודכנים. פנייה לתמיכה.');
+      } else if (err.code === 'permission-denied') {
+        alert('אין הרשאת כתיבה - יש לעדכן את חוקי Firebase. פנייה לתמיכה.');
+      } else {
+        alert('שגיאה בשמירת המתכון: ' + (err.message || 'שגיאה לא ידועה'));
+      }
     }
   }
 
