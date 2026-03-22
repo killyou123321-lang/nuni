@@ -100,19 +100,8 @@ export default function AddEditRecipe() {
     if (!title.trim()) return alert('הכניסי שם למתכון');
     setSaving(true);
 
-    const timeoutId = setTimeout(() => {
-      setSaving(false);
-      alert('השמירה לקחת יותר מדי זמן - בדקי את החיבור לאינטרנט ונסי שוב');
-    }, 15000);
-
     try {
       const finalCategory = newCategory.trim();
-
-      // שמירת קטגוריה לרשימת הקטגוריות של המשתמש אם היא לא קיימת
-      if (finalCategory && currentUser && !categories.some(c => c.name === finalCategory)) {
-        const catRef = doc(collection(db, 'userCategories', currentUser.uid, 'categories'));
-        await setDoc(catRef, { name: finalCategory }).catch(() => {});
-      }
 
       let imageURL = existingImageURL;
 
@@ -146,14 +135,17 @@ export default function AddEditRecipe() {
         await addDoc(collection(db, 'recipes'), data);
       }
 
-      clearTimeout(timeoutId);
+      // שמירת קטגוריה חדשה ברקע - לא חוסמת את הניווט
+      if (finalCategory && currentUser && !categories.some(c => c.name === finalCategory)) {
+        const catRef = doc(collection(db, 'userCategories', currentUser.uid, 'categories'));
+        setDoc(catRef, { name: finalCategory }).catch(() => {});
+      }
+
       navigate('/my-book');
     } catch (err) {
-      clearTimeout(timeoutId);
       console.error(err);
-      alert('שגיאה בשמירת המתכון');
-    } finally {
       setSaving(false);
+      alert('שגיאה בשמירת המתכון - בדקי חיבור לאינטרנט ונסי שוב');
     }
   }
 
