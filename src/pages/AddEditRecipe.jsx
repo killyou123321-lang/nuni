@@ -1,12 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  collection, addDoc, doc, getDoc, updateDoc, serverTimestamp, onSnapshot, query
+  collection, addDoc, doc, getDoc, updateDoc, serverTimestamp, onSnapshot, query, setDoc
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { colors } from '../colors';
+
+const PRESET_CATEGORIES = [
+  'ארוחת בוקר', 'ארוחת צהריים', 'ארוחת ערב', 'מרקים', 'סלטים',
+  'עוגות', 'קינוחים', 'חטיפים', 'לחמים', 'פסטה', 'אורז',
+  'דגים', 'בשר', 'עוף', 'טבעוני', 'צמחוני',
+];
 
 async function compressImage(file, maxWidth = 1200, quality = 0.75) {
   return new Promise((resolve) => {
@@ -67,7 +73,7 @@ export default function AddEditRecipe() {
         setImagePreview(data.imageURL || '');
       }
       setLoading(false);
-    });
+    }).catch(() => setLoading(false));
   }, [id, isEdit]);
 
   function handleImage(e) {
@@ -100,6 +106,13 @@ export default function AddEditRecipe() {
 
     try {
       const finalCategory = newCategory.trim() || category;
+
+      // שמירת קטגוריה חדשה לרשימת הקטגוריות של המשתמש
+      if (newCategory.trim() && currentUser) {
+        const catRef = doc(collection(db, 'userCategories', currentUser.uid, 'categories'));
+        await setDoc(catRef, { name: newCategory.trim() }).catch(() => {});
+      }
+
       let imageURL = existingImageURL;
 
       if (imageFile) {
@@ -200,22 +213,71 @@ export default function AddEditRecipe() {
         {/* Category */}
         <div>
           <label style={labelStyle}>קטגוריה</label>
-          <select
-            value={category}
-            onChange={e => setCategory(e.target.value)}
-            style={{ ...inputStyle, appearance: 'none' }}
-          >
-            <option value="">ללא קטגוריה</option>
-            {categories.map(c => (
-              <option key={c.id} value={c.name}>{c.name}</option>
-            ))}
-          </select>
+
+          {/* Preset category chips */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+            {PRESET_CATEGORIES.map(cat => {
+              const isSelected = category === cat && !newCategory.trim();
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => { setCategory(cat); setNewCategory(''); }}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '20px',
+                    border: `1.5px solid ${isSelected ? colors.peachDeep : colors.border}`,
+                    background: isSelected ? colors.peachDeep : colors.white,
+                    color: isSelected ? colors.white : colors.text,
+                    fontSize: '13px',
+                    fontWeight: isSelected ? '700' : '400',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {cat}
+                </button>
+              );
+            })}
+            {/* User's custom categories not in presets */}
+            {categories
+              .filter(c => !PRESET_CATEGORIES.includes(c.name))
+              .map(c => {
+                const isSelected = category === c.name && !newCategory.trim();
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => { setCategory(c.name); setNewCategory(''); }}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: '20px',
+                      border: `1.5px solid ${isSelected ? colors.peachDeep : colors.border}`,
+                      background: isSelected ? colors.peachDeep : colors.peachLight,
+                      color: isSelected ? colors.white : colors.text,
+                      fontSize: '13px',
+                      fontWeight: isSelected ? '700' : '400',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {c.name}
+                  </button>
+                );
+              })}
+          </div>
+
+          {/* New custom category input */}
           <input
             value={newCategory}
-            onChange={e => setNewCategory(e.target.value)}
+            onChange={e => { setNewCategory(e.target.value); if (e.target.value.trim()) setCategory(''); }}
             placeholder="או הכניסי קטגוריה חדשה..."
-            style={{ ...inputStyle, marginTop: '8px', fontSize: '13px' }}
+            style={{ ...inputStyle, fontSize: '13px' }}
           />
+          {newCategory.trim() && (
+            <div style={{ fontSize: '12px', color: colors.textLight, marginTop: '4px', paddingRight: '4px' }}>
+              קטגוריה חדשה: <strong>{newCategory.trim()}</strong> תישמר אוטומטית
+            </div>
+          )}
         </div>
 
         {/* Visibility */}
