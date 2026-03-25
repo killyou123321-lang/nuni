@@ -54,7 +54,8 @@ export default function AddEditRecipe() {
     if (!currentUser) return;
     const unsub = onSnapshot(
       query(collection(db, 'userCategories', currentUser.uid, 'categories')),
-      snap => setCategories(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+      snap => setCategories(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+      err => console.warn('[categories] onSnapshot error:', err.code, err.message)
     );
     return unsub;
   }, [currentUser]);
@@ -97,24 +98,36 @@ export default function AddEditRecipe() {
   }
 
   async function handleSave() {
+    console.log('[save] start — user:', currentUser?.uid, 'isEdit:', isEdit);
+
     if (!title.trim()) return alert('הכניסי שם למתכון');
+
+    // Guard: must be authenticated
+    if (!currentUser) {
+      alert('את לא מחוברת — אנא התחברי מחדש');
+      return;
+    }
+
     setSaving(true);
 
-    const withTimeout = (promise, ms) => Promise.race([
+    const withTimeout = (promise, ms, label) => Promise.race([
       promise,
-      new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), ms))
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(`TIMEOUT:${label}`)), ms)
+      ),
     ]);
 
     try {
       const finalCategory = newCategory.trim();
-
       let imageURL = existingImageURL;
 
       if (imageFile) {
+        console.log('[save] uploading image...');
         const compressed = await compressImage(imageFile);
         const storageRef = ref(storage, `recipes/${isEdit ? id : Date.now()}/image`);
-        await withTimeout(uploadBytes(storageRef, compressed), 20000);
-        imageURL = await withTimeout(getDownloadURL(storageRef), 10000);
+        await withTimeout(uploadBytes(storageRef, compressed), 20000, 'upload');
+        imageURL = await withTimeout(getDownloadURL(storageRef), 10000, 'getDownloadURL');
+        console.log('[save] image uploaded OK');
       }
 
       const data = {
@@ -130,33 +143,46 @@ export default function AddEditRecipe() {
         updatedAt: serverTimestamp(),
       };
 
+      console.log('[save] writing to Firestore — collection: recipes, isEdit:', isEdit);
+
       if (isEdit) {
-        await withTimeout(updateDoc(doc(db, 'recipes', id), data), 10000);
+        await withTimeout(updateDoc(doc(db, 'recipes', id), data), 10000, 'updateDoc');
       } else {
         data.createdAt = serverTimestamp();
         data.likes = [];
         data.savedBy = [];
         data.favoritedBy = [];
-        await withTimeout(addDoc(collection(db, 'recipes'), data), 10000);
+        await withTimeout(addDoc(collection(db, 'recipes'), data), 10000, 'addDoc');
       }
 
-      // שמירת קטגוריה חדשה ברקע - לא חוסמת את הניווט
-      if (finalCategory && currentUser && !categories.some(c => c.name === finalCategory)) {
+      console.log('[save] Firestore write OK');
+
+      // Save new category in background — does not block navigation
+      if (finalCategory && !categories.some(c => c.name === finalCategory)) {
         const catRef = doc(collection(db, 'userCategories', currentUser.uid, 'categories'));
-        setDoc(catRef, { name: finalCategory }).catch(() => {});
+        setDoc(catRef, { name: finalCategory }).catch(err =>
+          console.warn('[save] category write failed (non-blocking):', err.code)
+        );
       }
 
       navigate('/my-book');
     } catch (err) {
-      console.error('Save error:', err.code, err.message);
-      setSaving(false);
-      if (err.message === 'TIMEOUT') {
-        alert('השמירה נכשלה - ייתכן שחוקי ה-Firebase לא מעודכנים. פנייה לתמיכה.');
+      console.error('[save] FAILED — code:', err.code, 'message:', err.message, err);
+
+      const msg = err.message ?? '';
+      if (msg.startsWith('TIMEOUT:')) {
+        const step = msg.split(':')[1];
+        alert(`השמירה נכשלה בשלב "${step}" — בדקי חיבור לאינטרנט ונסי שוב`);
       } else if (err.code === 'permission-denied') {
-        alert('אין הרשאת כתיבה - יש לעדכן את חוקי Firebase. פנייה לתמיכה.');
+        alert('אין הרשאת כתיבה. יש לעדכן את חוקי Firebase Console.');
+      } else if (err.code === 'unauthenticated') {
+        alert('פג תוקף ההתחברות — אנא התחברי מחדש');
       } else {
-        alert('שגיאה בשמירת המתכון: ' + (err.message || 'שגיאה לא ידועה'));
+        alert('שגיאה בשמירה: ' + (err.message || 'שגיאה לא ידועה'));
       }
+    } finally {
+      // Guarantee loading state always resets, even if navigate() somehow throws
+      setSaving(false);
     }
   }
 
