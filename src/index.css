@@ -2,13 +2,30 @@
   box-sizing: border-box;
 }
 
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  display: inline-block;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: normal;
+  word-wrap: normal;
+  white-space: nowrap;
+  direction: ltr;
+}
+
 body {
   margin: 0;
   padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   direction: rtl;
-  background: #FFF4EF;
-  color: #5C4033;
+  background-color: #fdf9f3;
+  background-image: radial-gradient(#4a3728 0.5px, transparent 0.5px);
+  background-size: 40px 40px;
+  background-attachment: fixed;
+  color: #1c1c18;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -20,7 +37,7 @@ body {
 }
 
 input, textarea, select, button {
-  font-family: inherit;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 a {
@@ -40,6 +57,14 @@ img {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #F0D9CF;
+  background: #d2c4bb;
   border-radius: 2px;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
