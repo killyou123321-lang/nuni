@@ -54,11 +54,11 @@ export default function RecipeCard({ recipe, onSaveToBook }) {
     <div
       onClick={() => navigate(`/recipe/${recipe.id}`)}
       style={{
-        background: colors.white,
+        background: '#ffffff',
         borderRadius: '16px',
         overflow: 'hidden',
-        boxShadow: '0 2px 12px rgba(92,64,51,0.08)',
-        border: `1px solid ${colors.border}`,
+        boxShadow: '0 2px 12px rgba(50,34,20,0.08)',
+        border: `1px solid ${colors.outlineVariant}`,
         cursor: 'pointer',
         transition: 'transform 0.15s, box-shadow 0.15s',
       }}
@@ -72,21 +72,22 @@ export default function RecipeCard({ recipe, onSaveToBook }) {
       ) : (
         <div style={{
           width: '100%', height: '120px',
-          background: `linear-gradient(135deg, ${colors.peachLight}, ${colors.greenLight})`,
+          background: colors.surfaceContainerLow,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '40px',
-        }}>🍽️</div>
+        }}>
+          <span className="material-symbols-outlined" style={{ fontSize: '48px', color: colors.outline }}>restaurant</span>
+        </div>
       )}
 
       <div style={{ padding: '12px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
-          <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '600', color: colors.text, flex: 1 }}>
+          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: colors.primary, fontFamily: "'EB Garamond', serif", flex: 1, lineHeight: 1.3 }}>
             {recipe.title}
           </h3>
           {recipe.category && (
             <span style={{
               background: colors.peachLight,
-              color: colors.peachDeep,
+              color: colors.secondary,
               fontSize: '11px',
               fontWeight: '600',
               padding: '2px 8px',
@@ -102,40 +103,18 @@ export default function RecipeCard({ recipe, onSaveToBook }) {
         {recipe.authorName && !isOwn && (
           <div
             onClick={(e) => { e.stopPropagation(); navigate(`/profile/${recipe.authorId}`); }}
-            style={{ fontSize: '12px', color: colors.textLight, marginBottom: '8px', cursor: 'pointer' }}
+            style={{ fontSize: '12px', color: colors.onSurfaceVariant, marginBottom: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
           >
-            👤 {recipe.authorName}
+            <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>person</span>
+            {recipe.authorName}
           </div>
         )}
 
-        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-          <ActionBtn
-            icon={isLiked ? '💗' : '🤍'}
-            count={recipe.likes?.length || 0}
-            onClick={toggleLike}
-            active={isLiked}
-          />
-          <ActionBtn
-            icon={isFavorited ? '❤️' : '♡'}
-            count={null}
-            onClick={toggleFavorite}
-            active={isFavorited}
-            title="הוסיפי למועדפים"
-          />
-          <ActionBtn
-            icon={isSaved ? '🔖' : '📌'}
-            count={null}
-            onClick={handleSave}
-            active={isSaved}
-            title="שמרי לספר שלי"
-          />
-          <ActionBtn
-            icon="📤"
-            count={null}
-            onClick={e => { e.stopPropagation(); setShareOpen(true); }}
-            active={false}
-            title="שלחי לצ׳אט"
-          />
+        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+          <IconBtn icon="favorite" filled={isLiked} count={recipe.likes?.length || 0} onClick={toggleLike} active={isLiked} />
+          <IconBtn icon="bookmark" filled={isFavorited} onClick={toggleFavorite} active={isFavorited} title="הוסיפי למועדפים" />
+          <IconBtn icon="add_box" filled={isSaved} onClick={handleSave} active={isSaved} title="שמרי לספר שלי" />
+          <IconBtn icon="share" filled={false} onClick={e => { e.stopPropagation(); setShareOpen(true); }} active={false} title="שלחי לצ׳אט" />
         </div>
       </div>
       {shareOpen && <ShareToChatModal recipe={recipe} onClose={() => setShareOpen(false)} />}
@@ -143,27 +122,36 @@ export default function RecipeCard({ recipe, onSaveToBook }) {
   );
 }
 
-function ActionBtn({ icon, count, onClick, active, title }) {
+function IconBtn({ icon, filled, count, onClick, active, title }) {
   return (
     <button
       onClick={onClick}
       title={title}
       style={{
         background: active ? colors.peachLight : 'transparent',
-        border: `1px solid ${active ? colors.peach : colors.border}`,
+        border: `1px solid ${active ? colors.secondary : colors.outlineVariant}`,
         borderRadius: '8px',
         padding: '4px 8px',
         cursor: 'pointer',
         display: 'flex',
         alignItems: 'center',
         gap: '3px',
-        fontSize: '14px',
-        color: colors.text,
+        color: active ? colors.secondary : colors.onSurfaceVariant,
         transition: 'all 0.15s',
       }}
     >
-      <span>{icon}</span>
-      {count !== null && <span style={{ fontSize: '12px', color: colors.textLight }}>{count}</span>}
+      <span
+        className="material-symbols-outlined"
+        style={{
+          fontSize: '18px',
+          fontVariationSettings: filled
+            ? "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24"
+            : "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24",
+        }}
+      >{icon}</span>
+      {count !== undefined && count !== null && count > 0 && (
+        <span style={{ fontSize: '12px', color: colors.onSurfaceVariant }}>{count}</span>
+      )}
     </button>
   );
 }

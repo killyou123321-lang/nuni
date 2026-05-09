@@ -98,38 +98,27 @@ export default function AddEditRecipe() {
   }
 
   async function handleSave() {
-    console.log('[save] start — user:', currentUser?.uid, 'isEdit:', isEdit);
-
     if (!title.trim()) return alert('הכניסי שם למתכון');
-
-    // Guard: must be authenticated
     if (!currentUser) {
       alert('את לא מחוברת — אנא התחברי מחדש');
       return;
     }
-
     setSaving(true);
-
     const withTimeout = (promise, ms, label) => Promise.race([
       promise,
       new Promise((_, reject) =>
         setTimeout(() => reject(new Error(`TIMEOUT:${label}`)), ms)
       ),
     ]);
-
     try {
       const finalCategory = newCategory.trim();
       let imageURL = existingImageURL;
-
       if (imageFile) {
-        console.log('[save] uploading image...');
         const compressed = await compressImage(imageFile);
         const storageRef = ref(storage, `recipes/${isEdit ? id : Date.now()}/image`);
         await withTimeout(uploadBytes(storageRef, compressed), 20000, 'upload');
         imageURL = await withTimeout(getDownloadURL(storageRef), 10000, 'getDownloadURL');
-        console.log('[save] image uploaded OK');
       }
-
       const data = {
         title: title.trim(),
         category: finalCategory,
@@ -142,9 +131,6 @@ export default function AddEditRecipe() {
         authorPhoto: userProfile?.photoURL || currentUser.photoURL || '',
         updatedAt: serverTimestamp(),
       };
-
-      console.log('[save] writing to Firestore — collection: recipes, isEdit:', isEdit);
-
       if (isEdit) {
         await withTimeout(updateDoc(doc(db, 'recipes', id), data), 10000, 'updateDoc');
       } else {
@@ -154,21 +140,14 @@ export default function AddEditRecipe() {
         data.favoritedBy = [];
         await withTimeout(addDoc(collection(db, 'recipes'), data), 10000, 'addDoc');
       }
-
-      console.log('[save] Firestore write OK');
-
-      // Save new category in background — does not block navigation
       if (finalCategory && !categories.some(c => c.name === finalCategory)) {
         const catRef = doc(collection(db, 'userCategories', currentUser.uid, 'categories'));
         setDoc(catRef, { name: finalCategory }).catch(err =>
           console.warn('[save] category write failed (non-blocking):', err.code)
         );
       }
-
       navigate('/my-book');
     } catch (err) {
-      console.error('[save] FAILED — code:', err.code, 'message:', err.message, err);
-
       const msg = err.message ?? '';
       if (msg.startsWith('TIMEOUT:')) {
         const step = msg.split(':')[1];
@@ -181,29 +160,35 @@ export default function AddEditRecipe() {
         alert('שגיאה בשמירה: ' + (err.message || 'שגיאה לא ידועה'));
       }
     } finally {
-      // Guarantee loading state always resets, even if navigate() somehow throws
       setSaving(false);
     }
   }
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: colors.peachBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <span style={{ color: colors.textLight }}>טוענת...</span>
+    <div style={{ minHeight: '100vh', background: colors.background, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <span style={{ color: colors.onSurfaceVariant }}>טוענת...</span>
     </div>
   );
 
   return (
-    <div style={{ minHeight: '100vh', background: colors.peachBg, direction: 'rtl', paddingBottom: '40px' }}>
+    <div style={{ minHeight: '100vh', background: colors.background, direction: 'rtl', paddingBottom: '40px' }}>
       {/* Header */}
       <div style={{
-        background: `linear-gradient(135deg, ${colors.peach}, ${colors.peachDeep})`,
-        padding: '16px 20px',
+        background: '#ffffff',
+        borderBottom: `1px solid ${colors.outlineVariant}`,
+        padding: '14px 20px',
         display: 'flex',
         alignItems: 'center',
         gap: '12px',
+        boxShadow: '0 2px 8px rgba(50,34,20,0.06)',
       }}>
-        <button onClick={() => navigate(-1)} style={{ background: 'rgba(255,255,255,0.25)', border: 'none', borderRadius: '50%', width: '36px', height: '36px', cursor: 'pointer', color: colors.white, fontSize: '18px' }}>←</button>
-        <h1 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: colors.white }}>
+        <button
+          onClick={() => navigate(-1)}
+          style={{ background: colors.surfaceContainerLow, border: 'none', borderRadius: '50%', width: '38px', height: '38px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: '22px', color: colors.primary }}>arrow_forward</span>
+        </button>
+        <h1 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: colors.primary, fontFamily: "'EB Garamond', serif" }}>
           {isEdit ? 'עריכת מתכון' : 'מתכון חדש'}
         </h1>
       </div>
@@ -215,15 +200,15 @@ export default function AddEditRecipe() {
           borderRadius: '16px',
           overflow: 'hidden',
           cursor: 'pointer',
-          border: `2px dashed ${colors.border}`,
-          background: imagePreview ? 'transparent' : colors.peachLight,
+          border: `2px dashed ${colors.outlineVariant}`,
+          background: imagePreview ? 'transparent' : colors.surfaceContainerLow,
         }}>
           {imagePreview ? (
             <img src={imagePreview} alt="תמונה" style={{ width: '100%', height: '200px', objectFit: 'cover' }} />
           ) : (
             <div style={{ padding: '40px', textAlign: 'center' }}>
-              <div style={{ fontSize: '36px', marginBottom: '8px' }}>📷</div>
-              <div style={{ color: colors.textLight, fontSize: '14px' }}>לחצי להוספת תמונה</div>
+              <span className="material-symbols-outlined" style={{ fontSize: '40px', color: colors.outline, display: 'block', marginBottom: '8px' }}>add_photo_alternate</span>
+              <div style={{ color: colors.onSurfaceVariant, fontSize: '14px' }}>לחצי להוספת תמונה</div>
             </div>
           )}
           <input type="file" accept="image/*" onChange={handleImage} style={{ display: 'none' }} />
@@ -250,7 +235,6 @@ export default function AddEditRecipe() {
             placeholder="הכניסי קטגוריה..."
             style={{ ...inputStyle, fontSize: '14px' }}
           />
-          {/* Autocomplete suggestions */}
           {newCategory.trim() && (() => {
             const lower = newCategory.trim().toLowerCase();
             const allOptions = [
@@ -263,17 +247,12 @@ export default function AddEditRecipe() {
             if (!suggestions.length) return null;
             return (
               <div style={{
-                position: 'absolute',
-                top: '100%',
-                right: 0,
-                left: 0,
-                background: colors.white,
-                border: `1.5px solid ${colors.border}`,
+                position: 'absolute', top: '100%', right: 0, left: 0,
+                background: '#ffffff',
+                border: `1.5px solid ${colors.outlineVariant}`,
                 borderRadius: '12px',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
-                zIndex: 100,
-                overflow: 'hidden',
-                marginTop: '4px',
+                boxShadow: '0 4px 16px rgba(50,34,20,0.10)',
+                zIndex: 100, overflow: 'hidden', marginTop: '4px',
               }}>
                 {suggestions.map((s, i) => (
                   <button
@@ -281,16 +260,10 @@ export default function AddEditRecipe() {
                     type="button"
                     onMouseDown={() => setNewCategory(s)}
                     style={{
-                      display: 'block',
-                      width: '100%',
-                      textAlign: 'right',
-                      padding: '10px 16px',
-                      background: 'transparent',
-                      border: 'none',
-                      borderTop: i > 0 ? `1px solid ${colors.border}` : 'none',
-                      fontSize: '14px',
-                      color: colors.text,
-                      cursor: 'pointer',
+                      display: 'block', width: '100%', textAlign: 'right',
+                      padding: '10px 16px', background: 'transparent', border: 'none',
+                      borderTop: i > 0 ? `1px solid ${colors.outlineVariant}` : 'none',
+                      fontSize: '14px', color: colors.onSurface, cursor: 'pointer',
                     }}
                   >
                     {s}
@@ -306,25 +279,30 @@ export default function AddEditRecipe() {
           <label style={labelStyle}>נראות</label>
           <div style={{ display: 'flex', gap: '8px' }}>
             {[
-              { val: 'public', label: '🌍 כולם' },
-              { val: 'followers', label: '👥 עוקבים' },
-              { val: 'private', label: '🔒 פרטי' },
+              { val: 'public', label: 'כולם', icon: 'public' },
+              { val: 'followers', label: 'עוקבים', icon: 'group' },
+              { val: 'private', label: 'פרטי', icon: 'lock' },
             ].map(v => (
               <button
                 key={v.val}
                 onClick={() => setVisibility(v.val)}
                 style={{
                   flex: 1,
-                  background: visibility === v.val ? colors.peachDeep : colors.white,
-                  color: visibility === v.val ? colors.white : colors.text,
-                  border: `1.5px solid ${visibility === v.val ? colors.peachDeep : colors.border}`,
+                  background: visibility === v.val ? colors.secondary : '#ffffff',
+                  color: visibility === v.val ? '#ffffff' : colors.onSurface,
+                  border: `1.5px solid ${visibility === v.val ? colors.secondary : colors.outlineVariant}`,
                   borderRadius: '12px',
                   padding: '10px 6px',
                   fontSize: '12px',
                   fontWeight: '600',
                   cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '4px',
                 }}
               >
+                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>{v.icon}</span>
                 {v.label}
               </button>
             ))}
@@ -345,15 +323,32 @@ export default function AddEditRecipe() {
               {ingredients.length > 1 && (
                 <button
                   onClick={() => setIngredients(ingredients.filter((_, j) => j !== i))}
-                  style={{ background: colors.peachLight, border: 'none', borderRadius: '10px', padding: '0 12px', cursor: 'pointer', color: colors.peachDeep, fontSize: '16px' }}
-                >✕</button>
+                  style={{ background: '#fff0f0', border: 'none', borderRadius: '10px', padding: '0 12px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#b00020' }}>close</span>
+                </button>
               )}
             </div>
           ))}
           <button
             onClick={() => setIngredients([...ingredients, ''])}
-            style={{ background: colors.greenLight, border: `1px solid ${colors.green}`, borderRadius: '10px', padding: '8px 16px', cursor: 'pointer', color: colors.greenDeep, fontSize: '13px', fontWeight: '600' }}
-          >+ הוסיפי מצרך</button>
+            style={{
+              background: colors.surfaceContainerLow,
+              border: `1px solid ${colors.outlineVariant}`,
+              borderRadius: '10px',
+              padding: '8px 16px',
+              cursor: 'pointer',
+              color: colors.secondary,
+              fontSize: '13px',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>add</span>
+            הוסיפי מצרך
+          </button>
         </div>
 
         {/* Steps */}
@@ -361,7 +356,20 @@ export default function AddEditRecipe() {
           <label style={labelStyle}>שלבי הכנה</label>
           {steps.map((step, i) => (
             <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'flex-start' }}>
-              <span style={{ color: colors.peachDeep, fontWeight: '700', fontSize: '16px', paddingTop: '12px', minWidth: '20px' }}>{i + 1}.</span>
+              <span style={{
+                background: colors.secondary,
+                color: '#ffffff',
+                borderRadius: '50%',
+                minWidth: '28px',
+                height: '28px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: '700',
+                fontSize: '13px',
+                marginTop: '10px',
+                flexShrink: 0,
+              }}>{i + 1}</span>
               <textarea
                 value={step}
                 onChange={e => updateStep(i, e.target.value)}
@@ -372,15 +380,32 @@ export default function AddEditRecipe() {
               {steps.length > 1 && (
                 <button
                   onClick={() => setSteps(steps.filter((_, j) => j !== i))}
-                  style={{ background: colors.peachLight, border: 'none', borderRadius: '10px', padding: '8px 10px', cursor: 'pointer', color: colors.peachDeep, fontSize: '14px', marginTop: '4px' }}
-                >✕</button>
+                  style={{ background: '#fff0f0', border: 'none', borderRadius: '10px', padding: '8px 10px', cursor: 'pointer', marginTop: '4px', display: 'flex', alignItems: 'center' }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#b00020' }}>close</span>
+                </button>
               )}
             </div>
           ))}
           <button
             onClick={() => setSteps([...steps, ''])}
-            style={{ background: colors.greenLight, border: `1px solid ${colors.green}`, borderRadius: '10px', padding: '8px 16px', cursor: 'pointer', color: colors.greenDeep, fontSize: '13px', fontWeight: '600' }}
-          >+ הוסיפי שלב</button>
+            style={{
+              background: colors.surfaceContainerLow,
+              border: `1px solid ${colors.outlineVariant}`,
+              borderRadius: '10px',
+              padding: '8px 16px',
+              cursor: 'pointer',
+              color: colors.secondary,
+              fontSize: '13px',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>add</span>
+            הוסיפי שלב
+          </button>
         </div>
 
         {/* Save */}
@@ -388,19 +413,24 @@ export default function AddEditRecipe() {
           onClick={handleSave}
           disabled={saving}
           style={{
-            background: `linear-gradient(135deg, ${colors.peach}, ${colors.peachDeep})`,
+            background: colors.secondary,
             border: 'none',
             borderRadius: '16px',
             padding: '16px',
-            color: colors.white,
+            color: '#ffffff',
             fontWeight: '700',
             fontSize: '17px',
             cursor: saving ? 'default' : 'pointer',
             opacity: saving ? 0.7 : 1,
-            boxShadow: '0 3px 12px rgba(244,156,125,0.4)',
+            boxShadow: '0 3px 12px rgba(154,70,0,0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
           }}
         >
-          {saving ? 'שומרת...' : isEdit ? '✓ שמרי שינויים' : '✓ הוסיפי מתכון'}
+          <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>{saving ? 'hourglass_empty' : 'check_circle'}</span>
+          {saving ? 'שומרת...' : isEdit ? 'שמרי שינויים' : 'הוסיפי מתכון'}
         </button>
       </div>
     </div>
@@ -411,20 +441,20 @@ const labelStyle = {
   display: 'block',
   fontWeight: '600',
   fontSize: '14px',
-  color: colors.text,
+  color: colors.primary,
   marginBottom: '8px',
 };
 
 const inputStyle = {
   width: '100%',
   padding: '12px 16px',
-  border: `1.5px solid ${colors.border}`,
+  border: `1.5px solid ${colors.outlineVariant}`,
   borderRadius: '12px',
   fontSize: '14px',
   outline: 'none',
   direction: 'rtl',
-  background: colors.white,
-  color: colors.text,
+  background: '#ffffff',
+  color: colors.onSurface,
   boxSizing: 'border-box',
   display: 'block',
 };
