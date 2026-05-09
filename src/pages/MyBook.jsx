@@ -1,16 +1,15 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, doc, deleteDoc, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
-
-const PRESET_CATEGORIES = [
-  'ארוחת בוקר', 'מרקים', 'סלטים', 'מנות עיקריות', 'קינוחים',
-  'אפייה', 'שתייה', 'חטיפים', 'לחמים', 'פסטות', 'בשר', 'דגים',
-];
+import { collection, query, where, onSnapshot, doc, deleteDoc, addDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
-import { colors } from '../colors';
+
+const PRESET_CATEGORIES = [
+  'ארוחת בוקר', 'מרקים', 'סלטים', 'מנות עיקריות', 'קינוחים',
+  'אפייה', 'שתייה', 'חטיפים', 'לחמים', 'פסטות', 'בשר', 'דגים',
+];
 
 export default function MyBook() {
   const { currentUser } = useAuth();
@@ -26,30 +25,26 @@ export default function MyBook() {
   useEffect(() => {
     if (!currentUser) return;
     const q = query(collection(db, 'recipes'), where('authorId', '==', currentUser.uid));
-    const unsub = onSnapshot(q, snap => {
+    return onSnapshot(q, snap => {
       setRecipes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       setLoading(false);
     });
-    return unsub;
   }, [currentUser]);
 
   useEffect(() => {
     if (!currentUser) return;
     const ref = collection(db, 'userCategories', currentUser.uid, 'categories');
-    const unsub = onSnapshot(query(ref), snap => {
+    return onSnapshot(query(ref), snap => {
       setCategories(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
-    return unsub;
   }, [currentUser]);
 
   async function addCategory() {
     if (!newCategoryName.trim()) return;
     await addDoc(collection(db, 'userCategories', currentUser.uid, 'categories'), {
-      name: newCategoryName.trim(),
-      order: categories.length,
+      name: newCategoryName.trim(), order: categories.length,
     });
-    setNewCategoryName('');
-    setShowAddCategory(false);
+    setNewCategoryName(''); setShowAddCategory(false);
   }
 
   async function deleteCategory(catId) {
@@ -59,250 +54,188 @@ export default function MyBook() {
 
   const filtered = recipes.filter(r => {
     const matchCat = selectedCategory === 'הכל' || r.category === selectedCategory;
-    const searchLower = search.toLowerCase();
-    const matchSearch = !search || r.title?.toLowerCase().includes(searchLower) ||
-      r.ingredients?.some(i => i.toLowerCase().includes(searchLower));
+    const s = search.toLowerCase();
+    const matchSearch = !search || r.title?.toLowerCase().includes(s) ||
+      r.ingredients?.some(i => i.toLowerCase().includes(s));
     return matchCat && matchSearch;
   });
 
   const allCategories = ['הכל', ...categories.map(c => c.name)];
 
   return (
-    <div style={{ minHeight: '100vh', background: colors.peachBg, paddingBottom: '80px', direction: 'rtl' }}>
-      <Header title="📚 הספר שלי" />
+    <div style={{ minHeight: '100svh', direction: 'rtl', paddingBottom: '100px' }}>
+      <Header />
 
-      <div style={{ padding: '16px' }}>
+      <main style={{ padding: '24px 16px 0' }}>
+        {/* Title */}
+        <h2 style={{ margin: '0 0 20px', fontFamily: 'EB Garamond, serif', fontSize: '32px', color: '#322214', fontWeight: '600' }}>
+          הספר שלי
+        </h2>
+
         {/* Search */}
-        <div style={{ position: 'relative', marginBottom: '16px' }}>
-          <span style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', fontSize: '16px' }}>🔍</span>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '8px',
+          background: '#ffffff', border: '1px solid rgba(210,196,187,0.6)',
+          borderRadius: '16px', padding: '11px 16px', marginBottom: '16px',
+          boxShadow: '0 2px 8px rgba(74,55,40,0.04)',
+        }}>
+          <span className="material-symbols-outlined" style={{ color: '#80756d', fontSize: '20px' }}>search</span>
           <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
+            value={search} onChange={e => setSearch(e.target.value)}
             placeholder="חפשי לפי שם או מצרך..."
-            style={{
-              width: '100%',
-              padding: '12px 44px 12px 16px',
-              border: `1.5px solid ${colors.border}`,
-              borderRadius: '16px',
-              fontSize: '14px',
-              background: colors.white,
-              color: colors.text,
-              outline: 'none',
-              boxSizing: 'border-box',
-              direction: 'rtl',
-            }}
+            style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: '14px', color: '#1c1c18', direction: 'rtl', textAlign: 'right' }}
           />
         </div>
 
         {/* Categories */}
-        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', marginBottom: '16px', paddingBottom: '4px' }}>
+        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', marginBottom: '12px', paddingBottom: '4px', scrollbarWidth: 'none' }}>
           {allCategories.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              style={{
-                background: selectedCategory === cat ? colors.peachDeep : colors.white,
-                color: selectedCategory === cat ? colors.white : colors.text,
-                border: `1.5px solid ${selectedCategory === cat ? colors.peachDeep : colors.border}`,
-                borderRadius: '20px',
-                padding: '7px 16px',
-                fontSize: '13px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                transition: 'all 0.2s',
-              }}
-            >
-              {cat}
-            </button>
+            <button key={cat} onClick={() => setSelectedCategory(cat)} style={{
+              background: selectedCategory === cat ? '#9a4600' : 'rgba(235,232,226,0.7)',
+              color: selectedCategory === cat ? '#ffffff' : '#4e453e',
+              border: 'none', borderRadius: '20px', padding: '7px 16px',
+              fontSize: '13px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap',
+              boxShadow: selectedCategory === cat ? '0 4px 12px rgba(154,70,0,0.25)' : 'none',
+              transition: 'all 0.2s', flexShrink: 0,
+            }}>{cat}</button>
           ))}
-          <button
-            onClick={() => setShowAddCategory(true)}
-            style={{
-              background: colors.greenLight,
-              color: colors.greenDeep,
-              border: `1.5px solid ${colors.green}`,
-              borderRadius: '20px',
-              padding: '7px 14px',
-              fontSize: '13px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            + קטגוריה
-          </button>
+          <button onClick={() => setShowAddCategory(true)} style={{
+            background: 'rgba(235,232,226,0.7)', color: '#4e453e',
+            border: '1px dashed rgba(128,117,109,0.4)', borderRadius: '20px',
+            padding: '7px 14px', fontSize: '13px', fontWeight: '600',
+            cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+          }}>+ קטגוריה</button>
         </div>
 
-        {/* Category management */}
+        {/* Existing categories management */}
         {categories.length > 0 && (
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
             {categories.map(cat => (
               <span key={cat.id} style={{
-                background: colors.peachLight,
-                border: `1px solid ${colors.border}`,
-                borderRadius: '12px',
-                padding: '4px 10px 4px 6px',
-                fontSize: '12px',
-                color: colors.text,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
+                background: '#f7f3ed', border: '1px solid rgba(210,196,187,0.5)',
+                borderRadius: '12px', padding: '4px 6px 4px 10px',
+                fontSize: '12px', color: '#4e453e',
+                display: 'flex', alignItems: 'center', gap: '6px',
               }}>
                 {cat.name}
-                <button
-                  onClick={() => deleteCategory(cat.id)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: colors.textLight, fontSize: '13px', padding: 0, lineHeight: 1 }}
-                >✕</button>
+                <button onClick={() => deleteCategory(cat.id)} style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: '#80756d', fontSize: '14px', padding: 0, lineHeight: 1,
+                }}>✕</button>
               </span>
             ))}
           </div>
         )}
 
-        {/* Add category modal */}
+        {/* Add category form */}
         {showAddCategory && (
           <div style={{
-            background: colors.white,
-            border: `1.5px solid ${colors.border}`,
-            borderRadius: '16px',
-            padding: '16px',
-            marginBottom: '16px',
+            background: '#ffffff', border: '1px solid rgba(210,196,187,0.4)',
+            borderRadius: '16px', padding: '16px', marginBottom: '16px',
+            boxShadow: '0 4px 16px rgba(74,55,40,0.06)',
           }}>
             <div style={{ position: 'relative', marginBottom: '10px' }}>
               <input
-                autoFocus
-                value={newCategoryName}
+                autoFocus value={newCategoryName}
                 onChange={e => setNewCategoryName(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && addCategory()}
                 placeholder="שם הקטגוריה..."
-                style={{
-                  width: '100%',
-                  border: `1.5px solid ${colors.border}`,
-                  borderRadius: '10px',
-                  padding: '10px 14px',
-                  fontSize: '14px',
-                  outline: 'none',
-                  direction: 'rtl',
-                  color: colors.text,
-                  boxSizing: 'border-box',
-                  fontFamily: 'inherit',
-                }}
+                style={inputStyle}
               />
               {newCategoryName.trim() && (() => {
-                const lower = newCategoryName.toLowerCase();
                 const suggestions = PRESET_CATEGORIES.filter(
-                  s => s.toLowerCase().includes(lower) && !categories.find(c => c.name === s)
+                  s => s.toLowerCase().includes(newCategoryName.toLowerCase()) && !categories.find(c => c.name === s)
                 );
                 if (!suggestions.length) return null;
                 return (
                   <div style={{
                     position: 'absolute', top: '100%', right: 0, left: 0,
-                    background: colors.white,
-                    border: `1.5px solid ${colors.border}`,
-                    borderRadius: '10px',
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
-                    zIndex: 100, overflow: 'hidden', marginTop: '4px',
+                    background: '#ffffff', border: '1px solid rgba(210,196,187,0.5)',
+                    borderRadius: '10px', boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+                    zIndex: 100, marginTop: '4px',
                   }}>
                     {suggestions.map((s, i) => (
-                      <button
-                        key={s}
-                        type="button"
-                        onMouseDown={() => setNewCategoryName(s)}
-                        style={{
-                          display: 'block', width: '100%', textAlign: 'right',
-                          padding: '10px 14px', background: 'transparent', border: 'none',
-                          borderTop: i > 0 ? `1px solid ${colors.border}` : 'none',
-                          fontSize: '14px', color: colors.text, cursor: 'pointer', fontFamily: 'inherit',
-                        }}
-                      >
-                        {s}
-                      </button>
+                      <button key={s} type="button" onMouseDown={() => setNewCategoryName(s)} style={{
+                        display: 'block', width: '100%', textAlign: 'right',
+                        padding: '10px 14px', background: 'transparent',
+                        border: 'none', borderTop: i > 0 ? '1px solid rgba(210,196,187,0.3)' : 'none',
+                        fontSize: '14px', color: '#1c1c18', cursor: 'pointer', fontFamily: 'inherit',
+                      }}>{s}</button>
                     ))}
                   </div>
                 );
               })()}
             </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button onClick={addCategory} style={btnGreen}>הוסיפי</button>
-              <button onClick={() => { setShowAddCategory(false); setNewCategoryName(''); }} style={btnGray}>ביטול</button>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={addCategory} style={primaryBtn}>הוסיפי</button>
+              <button onClick={() => { setShowAddCategory(false); setNewCategoryName(''); }} style={ghostBtn}>ביטול</button>
             </div>
           </div>
         )}
 
         {/* Add recipe button */}
-        <button
-          onClick={() => navigate('/add-recipe')}
-          style={{
-            width: '100%',
-            background: `linear-gradient(135deg, ${colors.peach}, ${colors.peachDeep})`,
-            border: 'none',
-            borderRadius: '16px',
-            padding: '15px',
-            color: colors.white,
-            fontWeight: '700',
-            fontSize: '16px',
-            cursor: 'pointer',
-            marginBottom: '20px',
-            boxShadow: '0 3px 12px rgba(244,156,125,0.4)',
-          }}
-        >
-          + הוסיפי מתכון חדש
+        <button onClick={() => navigate('/add-recipe')} style={{
+          width: '100%', background: '#9a4600', border: 'none', borderRadius: '16px',
+          padding: '15px', color: '#ffffff', fontWeight: '700', fontSize: '15px',
+          cursor: 'pointer', marginBottom: '20px',
+          boxShadow: '0 4px 14px rgba(154,70,0,0.3)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+        }}>
+          <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>add</span>
+          הוסיפי מתכון חדש
         </button>
 
         {/* Recipes grid */}
         {loading ? (
-          <div style={{ textAlign: 'center', color: colors.textLight, padding: '40px' }}>טוענת...</div>
+          <div style={{ textAlign: 'center', color: '#80756d', padding: '40px' }}>טוענת...</div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px' }}>
-            <div style={{ fontSize: '48px', marginBottom: '12px' }}>📖</div>
-            <p style={{ color: colors.textLight, fontSize: '15px' }}>
-              {search || selectedCategory !== 'הכל' ? 'לא נמצאו מתכונים' : 'הספר שלך ריק עדיין\nהוסיפי את המתכון הראשון!'}
+            <span className="material-symbols-outlined" style={{ fontSize: '56px', color: '#d2c4bb', display: 'block', marginBottom: '12px' }}>menu_book</span>
+            <p style={{ color: '#80756d', fontSize: '15px', margin: 0 }}>
+              {search || selectedCategory !== 'הכל' ? 'לא נמצאו מתכונים' : 'הספר שלך ריק עדיין'}
             </p>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))', gap: '14px' }}>
             {filtered.map(recipe => (
-              <RecipeTile key={recipe.id} recipe={recipe} onEdit={() => navigate(`/edit-recipe/${recipe.id}`)} />
+              <RecipeTile key={recipe.id} recipe={recipe} />
             ))}
           </div>
         )}
-      </div>
+      </main>
+
       <BottomNav />
     </div>
   );
 }
 
-function RecipeTile({ recipe, onEdit }) {
+function RecipeTile({ recipe }) {
   const navigate = useNavigate();
   return (
-    <div
-      onClick={() => navigate(`/recipe/${recipe.id}`)}
-      style={{
-        background: colors.white,
-        borderRadius: '14px',
-        overflow: 'hidden',
-        boxShadow: '0 2px 10px rgba(92,64,51,0.08)',
-        border: `1px solid ${colors.border}`,
-        cursor: 'pointer',
-      }}
-    >
+    <div onClick={() => navigate(`/recipe/${recipe.id}`)} style={{
+      background: '#ffffff', borderRadius: '16px', overflow: 'hidden',
+      boxShadow: '0 2px 12px rgba(74,55,40,0.06)',
+      border: '1px solid rgba(210,196,187,0.25)', cursor: 'pointer',
+    }}>
       {recipe.imageURL ? (
         <img src={recipe.imageURL} alt={recipe.title} style={{ width: '100%', height: '110px', objectFit: 'cover' }} />
       ) : (
         <div style={{
-          width: '100%', height: '80px',
-          background: `linear-gradient(135deg, ${colors.peachLight}, ${colors.greenLight})`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px',
-        }}>🍽️</div>
-      )}
-      <div style={{ padding: '10px' }}>
-        <div style={{ fontWeight: '600', fontSize: '13px', color: colors.text, marginBottom: '4px', lineHeight: '1.3' }}>
-          {recipe.title}
+          width: '100%', height: '90px', background: '#f1ede7',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <span className="material-symbols-outlined" style={{ fontSize: '40px', color: '#d2c4bb' }}>restaurant</span>
         </div>
+      )}
+      <div style={{ padding: '10px 12px' }}>
+        <div style={{
+          fontFamily: 'EB Garamond, serif', fontWeight: '500',
+          fontSize: '15px', color: '#322214', marginBottom: '4px', lineHeight: '1.3',
+        }}>{recipe.title}</div>
         {recipe.category && (
           <span style={{
-            background: colors.peachLight, color: colors.peachDeep,
-            fontSize: '10px', fontWeight: '600', padding: '2px 6px', borderRadius: '8px',
+            background: 'rgba(154,70,0,0.08)', color: '#9a4600',
+            fontSize: '10px', fontWeight: '600', padding: '2px 8px', borderRadius: '8px',
           }}>{recipe.category}</span>
         )}
       </div>
@@ -310,11 +243,19 @@ function RecipeTile({ recipe, onEdit }) {
   );
 }
 
-const btnGreen = {
-  background: colors.greenDeep, border: 'none', borderRadius: '10px',
-  padding: '10px 14px', color: 'white', fontWeight: '600', cursor: 'pointer', fontSize: '13px',
+const inputStyle = {
+  width: '100%', padding: '11px 14px', borderRadius: '12px',
+  border: '1px solid rgba(210,196,187,0.4)', fontSize: '14px',
+  outline: 'none', direction: 'rtl', background: '#f7f3ed',
+  color: '#1c1c18', boxSizing: 'border-box', fontFamily: 'inherit',
 };
-const btnGray = {
-  background: colors.peachLight, border: 'none', borderRadius: '10px',
-  padding: '10px 14px', color: colors.text, fontWeight: '600', cursor: 'pointer', fontSize: '13px',
+const primaryBtn = {
+  background: '#9a4600', border: 'none', borderRadius: '10px',
+  padding: '10px 16px', color: '#ffffff', fontWeight: '600',
+  cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit',
+};
+const ghostBtn = {
+  background: '#f7f3ed', border: 'none', borderRadius: '10px',
+  padding: '10px 16px', color: '#4e453e', fontWeight: '600',
+  cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit',
 };
